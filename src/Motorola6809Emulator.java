@@ -6,10 +6,16 @@ import java.awt.print.PrinterException;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
+/**
+ * Functional Interface representing a binary operation.
+ */
 @FunctionalInterface
 interface BinaryOperation {
     int apply(int a, int b);
 }
+/**
+ * Class representing the Motorola 6809 Emulator.
+ */
 public class Motorola6809Emulator {
 
     private JFrame frame;
@@ -34,6 +40,9 @@ public class Motorola6809Emulator {
     private JTextArea asmMemoryView;
     private JTextArea romMemoryView;
 
+    /**
+     * Constructor for the Motorola 6809 Emulator.
+     */
     public Motorola6809Emulator()
     {
         memory = new String[1000]; // Assume our emulated memory has 1000 slots
@@ -56,7 +65,7 @@ public class Motorola6809Emulator {
         openAsmEditorButton = new JButton("Open Asm Editor");
         frame.add(openAsmEditorButton);
 
-        // Add components to frame
+        /* Add components to frame */
         frame.add(new JLabel("Instruction:"));
         frame.add(instructionBox);
         frame.add(executeButton);
@@ -93,7 +102,7 @@ public class Motorola6809Emulator {
         frame.add(new JLabel("Console Output:"));
         frame.add(outputScrollPane);
 
-        // Print button to print the contents of outputArea
+        /* Print button to print the contents of outputArea */
         printButton = new JButton("Print Results");
         printButton.addActionListener(new ActionListener() {
             @Override
@@ -108,7 +117,7 @@ public class Motorola6809Emulator {
 
         frame.add(printButton);
 
-        // Button action for execution
+        /* Button action for execution */
         executeButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -116,7 +125,7 @@ public class Motorola6809Emulator {
             }
         });
 
-        // Button action for stepping
+        /* Button action for stepping*/
         stepButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -127,7 +136,7 @@ public class Motorola6809Emulator {
             }
         });
 
-        // Initialize memory with placeholder values
+        /* Initialize memory with placeholder values */
         for (int i = 0; i < memory.length; i++) {
             memory[i] = "00"; // Placeholder value
         }
@@ -260,7 +269,7 @@ public class Motorola6809Emulator {
     }
 
     private void handleImmediateAddressing(String operand, JTextField accumulatorField, int memoryAddress) {
-        // Check if there's an immediate value
+        /* Check if there's an immediate value */
         String immediateValue = "";
 
         if (operand.startsWith("#$")) {
@@ -285,8 +294,8 @@ public class Motorola6809Emulator {
         operand1.setText(Integer.toString(result));
     }
 
+    // Handle division logic
     private void handleDivision(String operand) {
-        // Handle division logic
         int divisor = Integer.parseInt(operand.substring(2), 16);
         int dividend = Integer.parseInt(accumulatorAField.getText());
         if (divisor == 0) {
