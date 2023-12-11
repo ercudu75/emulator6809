@@ -129,6 +129,7 @@ public class Motorola6809Emulator {
                 }
             }
         });
+
         frame.add(stackPointerField);
         conditionCodeRegisterField = new JTextField(10);
 
@@ -222,6 +223,7 @@ public class Motorola6809Emulator {
     }
 
 
+    /* salma/mouad/adam */
     private void openAsmEditor() {
         // Create the dialog and text areas for assembly code input, memory view, and ROM view
         asmEditorDialog = new JDialog(frame, "Assembly Code Editor", true);
@@ -288,7 +290,7 @@ public class Motorola6809Emulator {
         asmMemoryView.setText(builder.toString());
     }
 
-
+    /* salma/mouad/adam */
     private void runAssemblyCode(String asmCode) {
         String[] lines = asmCode.split("\\n"); // Split the input text into lines
         for (String line : lines) {
