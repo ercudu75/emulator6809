@@ -70,7 +70,7 @@ public class Motorola6809Emulator {
 
         /* GUI components for CPU instructions and registers */
         instructionBox = new JComboBox<>(new String[]{
-            "LDA", "LDB", "ADD", "SUB", "MUL", "DIV", "LDX", "LDY", "PSH", "PUL"
+            "LDA", "LDB", "ADD", "SUB", "MUL", "LDX", "LDY", "PSH", "PUL"
         });
         executeButton = new JButton("Execute");
         accumulatorAField = new JTextField(10);
@@ -97,7 +97,6 @@ public class Motorola6809Emulator {
         }
         }
         });
-        frame.add(new JLabel("Index Register X:"));
         frame.add(indexRegisterXField);
         indexRegisterYField = new JTextField(10);
         indexRegisterYField.addActionListener(new ActionListener() {
@@ -114,7 +113,6 @@ public class Motorola6809Emulator {
                 }
             }
         });
-        frame.add(new JLabel("Index Register Y:"));
         frame.add(indexRegisterYField);
         stackPointerField = new JTextField(10);
         stackPointerField.addActionListener(new ActionListener() {
@@ -131,7 +129,6 @@ public class Motorola6809Emulator {
                 }
             }
         });
-        frame.add(new JLabel("Stack Pointer:"));
         frame.add(stackPointerField);
         conditionCodeRegisterField = new JTextField(10);
 
@@ -346,12 +343,6 @@ public class Motorola6809Emulator {
                     performBinaryOperation(accumulatorAField, accumulatorBField, (a, b) -> a * b);
                     printToOutput("Executed instruction: " + line);
                     break;
-                case "DIV":
-                    if (parts.length >= 2) {
-                        handleDivision(parts[1]);
-                        printToOutput("Executed instruction: " + line);
-                    }
-                    break;
                 case "STA":
                     if (parts.length >= 2) {
                         handleSTA(parts[1], accumulatorAField);
@@ -479,23 +470,6 @@ public class Motorola6809Emulator {
                     accumulatorAField.setText(String.format("%02X", product).toUpperCase());
                 } catch (NumberFormatException ex) {
                     JOptionPane.showMessageDialog(frame, "Invalid hexadecimal input for MUL.");
-                }
-                break;
-
-            case "DIV":
-                try {
-                    String inputA = accumulatorAField.getText().replaceAll("(?i)^0x", "");
-                    String inputB = accumulatorBField.getText().replaceAll("(?i)^0x", "");
-                    int a = Integer.parseInt(inputA, 16);
-                    int b = Integer.parseInt(inputB, 16);
-                    if (b == 0) {
-                        JOptionPane.showMessageDialog(frame, "Division by zero error!");
-                        return;
-                    }
-                    int quotient = a / b;
-                    accumulatorAField.setText(Integer.toHexString(quotient).toUpperCase());
-                } catch (NumberFormatException ex) {
-                    JOptionPane.showMessageDialog(frame, "Invalid hexadecimal input for DIV.");
                 }
                 break;
 
