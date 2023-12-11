@@ -39,22 +39,39 @@ public class Motorola6809Emulator {
     private JButton openAsmEditorButton;
     private JTextArea asmMemoryView;
     private JTextArea romMemoryView;
+    private JTextField indexRegisterXField;
+    private JTextField indexRegisterYField;
+    private JTextField stackPointerField;
+    private JTextField conditionCodeRegisterField;
+
+    private int indexRegisterX;
+    private int indexRegisterY;
+    private int programCounter;
+    private int stackPointer;
+    private int conditionCodeRegister;
 
     /**
      * Constructor for the Motorola 6809 Emulator.
      */
     public Motorola6809Emulator()
     {
-        memory = new String[1000]; // Assume our emulated memory has 1000 slots
-        for (int i = 0; i < memory.length; i++) {
-            memory[i] = "00"; // Placeholder value
-        }
+
+        indexRegisterX = 0;
+        indexRegisterY = 0;
+        programCounter = 0xFC00; // Start at FC00
+        stackPointer = 0xFFFF;   // Typically starts at the top of memory
+        conditionCodeRegister = 0;
+
+        memory = new String[65536]; // Use 65536 if you need the full addressable range
+        Arrays.fill(memory, "00");
 
         frame = new JFrame("Motorola 6809 Emulator");
         frame.setLayout(new FlowLayout());
 
         /* GUI components for CPU instructions and registers */
-        instructionBox = new JComboBox<>(new String[]{"LDA", "LDB", "ADD", "SUB", "MUL", "DIV"});
+        instructionBox = new JComboBox<>(new String[]{
+            "LDA", "LDB", "ADD", "SUB", "MUL", "DIV", "LDX", "LDY", "PSH", "PUL"
+        });
         executeButton = new JButton("Execute");
         accumulatorAField = new JTextField(10);
         accumulatorBField = new JTextField(10);
@@ -65,6 +82,59 @@ public class Motorola6809Emulator {
         openAsmEditorButton = new JButton("Open Asm Editor");
         frame.add(openAsmEditorButton);
 
+        indexRegisterXField = new JTextField(10);
+        indexRegisterXField.addActionListener(new ActionListener() {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+        // Parse the input value as an integer
+        try {
+            int value = Integer.parseInt(indexRegisterXField.getText());
+            // Update the internal register value
+            indexRegisterX = value;
+            // Optionally update the GUI or memory if needed
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(frame, "Invalid input for Index Register X");
+        }
+        }
+        });
+        frame.add(new JLabel("Index Register X:"));
+        frame.add(indexRegisterXField);
+        indexRegisterYField = new JTextField(10);
+        indexRegisterYField.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // Parse the input value as an integer
+                try {
+                    int value = Integer.parseInt(indexRegisterYField.getText());
+                    // Update the internal register value
+                    indexRegisterY = value;
+                    // Optionally update the GUI or memory if needed
+                } catch (NumberFormatException ex) {
+                    JOptionPane.showMessageDialog(frame, "Invalid input for Index Register Y");
+                }
+            }
+        });
+        frame.add(new JLabel("Index Register Y:"));
+        frame.add(indexRegisterYField);
+        stackPointerField = new JTextField(10);
+        stackPointerField.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // Parse the input value as a hexadecimal integer
+                try {
+                    int value = Integer.parseInt(stackPointerField.getText(), 16);
+                    // Update the internal stack pointer value
+                    stackPointer = value;
+                    // Optionally update the GUI or memory if needed
+                } catch (NumberFormatException ex) {
+                    JOptionPane.showMessageDialog(frame, "Invalid input for Stack Pointer");
+                }
+            }
+        });
+        frame.add(new JLabel("Stack Pointer:"));
+        frame.add(stackPointerField);
+        conditionCodeRegisterField = new JTextField(10);
+
         /* Add components to frame */
         frame.add(new JLabel("Instruction:"));
         frame.add(instructionBox);
@@ -73,27 +143,27 @@ public class Motorola6809Emulator {
         frame.add(accumulatorAField);
         frame.add(new JLabel("Accumulator B:"));
         frame.add(accumulatorBField);
-        frame.add(new JLabel("Breakpoint Address:"));
-        frame.add(breakpointField);
+        // frame.add(new JLabel("Breakpoint Address:"));
+        // frame.add(breakpointField);
         frame.add(stepButton);
+        frame.add(new JLabel("Index Register X:"));
+        frame.add(indexRegisterXField);
+        frame.add(new JLabel("Index Register Y:"));
+        frame.add(indexRegisterYField);
+        frame.add(new JLabel("Stack Pointer:"));
+        frame.add(stackPointerField);
+        frame.add(new JLabel("Condition Code Register:"));
+        frame.add(conditionCodeRegisterField);
         frame.add(new JLabel("Memory View:"));
         frame.add(new JScrollPane(memoryView));
 
         /* Input simulation field and interrupt button */
-        JLabel inputLabel = new JLabel("Input:");
-        inputField = new JTextField(10);
-        interruptButton = new JButton("Generate Interrupt");
-        interruptButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                // Handle interrupt generation here
-                JOptionPane.showMessageDialog(frame, "Interrupt signal generated!");
-            }
-        });
+        // JLabel inputLabel = new JLabel("Input:");
+        // inputField = new JTextField(10);
 
-        frame.add(inputLabel);
-        frame.add(inputField);
-        frame.add(interruptButton);
+        // frame.add(inputLabel);
+        // frame.add(inputField);
+        // frame.add(interruptButton);
 
         /* Console-like output area for displaying outputs and debug messages */
         outputArea = new JTextArea(5, 30);
@@ -115,7 +185,7 @@ public class Motorola6809Emulator {
             }
         });
 
-        frame.add(printButton);
+        // frame.add(printButton);
 
         /* Button action for execution */
         executeButton.addActionListener(new ActionListener() {
@@ -153,6 +223,8 @@ public class Motorola6809Emulator {
             }
         });
     }
+
+
     private void openAsmEditor() {
         // Create the dialog and text areas for assembly code input, memory view, and ROM view
         asmEditorDialog = new JDialog(frame, "Assembly Code Editor", true);
@@ -185,12 +257,22 @@ public class Motorola6809Emulator {
         asmEditorDialog.setSize(400, 600); // Adjusted the height to accommodate the new memory views
         asmEditorDialog.setVisible(true);
     }
+
+
     private void updateMemoryViews() {
         // Update the memory views for both the main emulator and the assembly editor
         updateMemoryView();
         updateAsmMemoryView();
         updateRomMemoryView();
     }
+
+    private void updateRegisterFields() {
+        indexRegisterXField.setText(Integer.toString(indexRegisterX));
+        indexRegisterYField.setText(Integer.toString(indexRegisterY));
+        stackPointerField.setText(Integer.toHexString(stackPointer).toUpperCase());
+        conditionCodeRegisterField.setText(Integer.toBinaryString(conditionCodeRegister));
+    }
+
     private void updateRomMemoryView() {
         StringBuilder builder = new StringBuilder();
         // Assuming FC00 is the start address for ROM view
@@ -208,6 +290,8 @@ public class Motorola6809Emulator {
         }
         asmMemoryView.setText(builder.toString());
     }
+
+
     private void runAssemblyCode(String asmCode) {
         String[] lines = asmCode.split("\\n"); // Split the input text into lines
         for (String line : lines) {
@@ -233,6 +317,22 @@ public class Motorola6809Emulator {
                         handleImmediateAddressing(parts[1], accumulatorBField, 0x201);
                         printToOutput("Executed instruction: " + line);
                     }
+                    break;
+                case "LDX":
+                // Load index register X with a value, perhaps from the next memory location
+                indexRegisterX = Integer.parseInt(memory[programCounter + 1], 16); // Assuming memory is hexadecimal
+                break;
+                case "LDY":
+                    // Load index register Y with a value
+                    indexRegisterY = Integer.parseInt(memory[programCounter + 2], 16); // Just an example
+                    break;
+                case "PSH":
+                    // Push a value onto the stack
+                    memory[stackPointer--] = accumulatorAField.getText(); // Decrement stack pointer after push
+                    break;
+                case "PUL":
+                    // Pull a value from the stack
+                    accumulatorAField.setText(memory[++stackPointer]); // Increment stack pointer before pull
                     break;
                 case "ADD":
                     performBinaryOperation(accumulatorAField, accumulatorBField, (a, b) -> a + b);
@@ -266,7 +366,10 @@ public class Motorola6809Emulator {
         }
 
         updateMemoryViews();
+        updateRegisterFields();
     }
+
+
 
     private void handleImmediateAddressing(String operand, JTextField accumulatorField, int memoryAddress) {
         /* Check if there's an immediate value */
@@ -325,34 +428,79 @@ public class Motorola6809Emulator {
                 accumulatorBField.setText(accumulatorBField.getText());
                 break;
             case "ADD":
-                int a = Integer.parseInt(accumulatorAField.getText());
-                int b = Integer.parseInt(accumulatorBField.getText());
-                int sum = a + b;
-                accumulatorAField.setText(Integer.toString(sum));
+                try {
+                    // Remove any leading "0x" or "0X" if present, then parse the hex string
+                    String inputA = accumulatorAField.getText().replaceAll("(?i)^0x", "");
+                    String inputB = accumulatorBField.getText().replaceAll("(?i)^0x", "");
+                    int a = Integer.parseInt(inputA, 16);
+                    int b = Integer.parseInt(inputB, 16);
+                    int sum = a + b;
+                    // Convert the result back to a hex string, ensuring it's uppercase and prefixed with "0x"
+                    accumulatorAField.setText(String.format("%02X", sum).toUpperCase());
+                } catch (NumberFormatException ex) {
+                    JOptionPane.showMessageDialog(frame, "Invalid hexadecimal input.");
+                }
+            break;
+            case "LDX":
+                // Load index register X with a value, perhaps from the next memory location
+                indexRegisterX = Integer.parseInt(memory[programCounter + 1], 16); // Assuming memory is hexadecimal
+                break;
+            case "LDY":
+                // Load index register Y with a value
+                indexRegisterY = Integer.parseInt(memory[programCounter + 2], 16); // Just an example
+                break;
+            case "PSH":
+                // Push a value onto the stack
+                memory[stackPointer--] = accumulatorAField.getText(); // Decrement stack pointer after push
+                break;
+            case "PUL":
+                // Pull a value from the stack
+                accumulatorAField.setText(memory[++stackPointer]); // Increment stack pointer before pull
                 break;
             case "SUB":
-                a = Integer.parseInt(accumulatorAField.getText());
-                b = Integer.parseInt(accumulatorBField.getText());
-                int difference = a - b;
-                accumulatorAField.setText(Integer.toString(difference));
+                try {
+                    String inputA = accumulatorAField.getText().replaceAll("(?i)^0x", "");
+                    String inputB = accumulatorBField.getText().replaceAll("(?i)^0x", "");
+                    int a = Integer.parseInt(inputA, 16);
+                    int b = Integer.parseInt(inputB, 16);
+                    int difference = a - b;
+                    accumulatorAField.setText(String.format("%02X", difference).toUpperCase());
+                } catch (NumberFormatException ex) {
+                    JOptionPane.showMessageDialog(frame, "Invalid hexadecimal input for SUB.");
+                }
                 break;
             case "MUL":
-                a = Integer.parseInt(accumulatorAField.getText());
-                b = Integer.parseInt(accumulatorBField.getText());
-                int product = a * b;
-                accumulatorAField.setText(Integer.toString(product));
-                break;
-            case "DIV":
-                a = Integer.parseInt(accumulatorAField.getText());
-                b = Integer.parseInt(accumulatorBField.getText());
-                if (b == 0) {
-                    JOptionPane.showMessageDialog(frame, "Division by zero error!");
-                    return;
+                try {
+                    String inputA = accumulatorAField.getText().replaceAll("(?i)^0x", "");
+                    String inputB = accumulatorBField.getText().replaceAll("(?i)^0x", "");
+                    int a = Integer.parseInt(inputA, 16);
+                    int b = Integer.parseInt(inputB, 16);
+                    int product = a * b;
+                    accumulatorAField.setText(String.format("%02X", product).toUpperCase());
+                } catch (NumberFormatException ex) {
+                    JOptionPane.showMessageDialog(frame, "Invalid hexadecimal input for MUL.");
                 }
-                int quotient = a / b;
-                accumulatorAField.setText(Integer.toString(quotient));
                 break;
+
+            case "DIV":
+                try {
+                    String inputA = accumulatorAField.getText().replaceAll("(?i)^0x", "");
+                    String inputB = accumulatorBField.getText().replaceAll("(?i)^0x", "");
+                    int a = Integer.parseInt(inputA, 16);
+                    int b = Integer.parseInt(inputB, 16);
+                    if (b == 0) {
+                        JOptionPane.showMessageDialog(frame, "Division by zero error!");
+                        return;
+                    }
+                    int quotient = a / b;
+                    accumulatorAField.setText(Integer.toHexString(quotient).toUpperCase());
+                } catch (NumberFormatException ex) {
+                    JOptionPane.showMessageDialog(frame, "Invalid hexadecimal input for DIV.");
+                }
+                break;
+
         }
+        programCounter += 2;
 
         if(instructionPointer < memory.length - 1) {
             memory[instructionPointer++] = accumulatorAField.getText();
@@ -363,7 +511,7 @@ public class Motorola6809Emulator {
 
         /* Update the memory view */
         updateMemoryView();
-        printToOutput("Executed instruction: " + instructionBox.getSelectedItem());
+        printToOutput("Executed instruction: " + op + ", PC now at: " + Integer.toHexString(programCounter));
     }
 
     private void updateMemoryView() {
