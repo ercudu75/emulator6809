@@ -271,7 +271,7 @@ public class Motorola6809Emulator {
         stackPointerField.setText(Integer.toHexString(stackPointer).toUpperCase());
         conditionCodeRegisterField.setText(Integer.toBinaryString(conditionCodeRegister));
     }
-
+    /* adam/mouad/salma */
     private void updateRomMemoryView() {
         StringBuilder builder = new StringBuilder();
         // Assuming FC00 is the start address for ROM view
@@ -281,7 +281,7 @@ public class Motorola6809Emulator {
         romMemoryView.setText(builder.toString());
         romMemoryView.setCaretPosition(0); // Scroll to the top
     }
-
+    /* salma/mouad/adam */
     private void updateAsmMemoryView() {
         StringBuilder builder = new StringBuilder();
         for (int i = 0; i < memory.length; i++) {
@@ -360,6 +360,7 @@ public class Motorola6809Emulator {
 
         updateMemoryViews();
         updateRegisterFields();
+        updateAsmMemoryView();
     }
 
 
