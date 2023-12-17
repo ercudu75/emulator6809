@@ -241,7 +241,7 @@ public class Motorola6809Emulator {
         asmEditorDialog.add(new JScrollPane(asmMemoryView));
 
         romMemoryView = new JTextArea(10, 30); // Initialize romMemoryView
-        asmEditorDialog.add(new JLabel("ROM View (Starting from FC00):"));
+        asmEditorDialog.add(new JLabel("ROM View:"));
         asmEditorDialog.add(new JScrollPane(romMemoryView));
 
         JButton runAsmCodeButton = new JButton("Run Asm Code");
@@ -280,13 +280,26 @@ public class Motorola6809Emulator {
     /* adam/mouad/salma */
     private void updateRomMemoryView() {
         StringBuilder builder = new StringBuilder();
-        // Assuming FC00 is the start address for ROM view
-        for (int i = 0xFC00; i < memory.length && i < 0xFFFF; i++) {
-            builder.append("Addr ").append(Integer.toHexString(i).toUpperCase()).append(": ").append(memory[i]).append("\n");
+        // Define the actual ROM size you want to display
+        int romSize = 256; // The size of the ROM you wish to display
+        int romStartAddress = 0xFC00; // The starting address of the ROM in the emulator
+        int actualRomStartSlot = memory.length - romSize; // This is where ROM starts in your 1000-slot array
+
+        for (int i = 0; i < romSize; i++) {
+            // Calculate the actual index in the 1000-slot array where the ROM data is stored
+            int actualIndex = actualRomStartSlot + i;
+            // Check if the actual index is within the bounds of the memory array
+            if (actualIndex >= 0 && actualIndex < memory.length) {
+                // Format the address as a 4-digit hexadecimal number with leading zeros
+                String address = String.format("%04X", romStartAddress + i);
+                builder.append("Addr ").append(address).append(": ").append(memory[actualIndex]).append("\n");
+            }
         }
+
         romMemoryView.setText(builder.toString());
         romMemoryView.setCaretPosition(0); // Scroll to the top
     }
+
 
     /* salma/mouad/adam */
     private void updateAsmMemoryView() {
@@ -320,13 +333,65 @@ public class Motorola6809Emulator {
                 case "LDA":
                     if (parts.length >= 2) {
                         handleImmediateAddressing(parts[1], accumulatorAField);
-                        printToOutput("Executed instruction: " + line);
+                        int romSize = 256; // Example ROM size
+                        int romStartIndex = memory.length - romSize; // Memory array index where ROM starts
+
+                        // Convert program counter to memory array index
+                        int memoryIndex = programCounter - 0xFC00 + romStartIndex;
+                        String ldaOpcode = "86";
+                        // Store opcode at the current program counter location
+                        if (memoryIndex >= romStartIndex && memoryIndex < memory.length) {
+                            memory[memoryIndex] = ldaOpcode;
+
+                            // Check if the operand is immediate addressing with a constant value
+                            if (parts[1].startsWith("#$")) {
+                                // Extract the immediate value and store it in the next address
+                                String immediateValue = parts[1].substring(2); // Remove the '#$'
+                                memory[memoryIndex + 1] = immediateValue;
+
+                                // Increment program counter by 2, for the opcode and operand
+                                programCounter += 2;
+                            }
+
+                            // Update the ROM view after modifying memory
+                            updateRomMemoryView();
+                        } else {
+                            JOptionPane.showMessageDialog(frame, "Program counter is out of ROM range.");
+                        }
+
+                        printToOutput(String.format("Executed instruction: LDA #%s, PC at: %04X", line, programCounter));
+
                     }
                     break;
                 case "LDB":
                     if (parts.length >= 2) {
                         handleImmediateAddressing(parts[1], accumulatorBField);
-                        printToOutput("Executed instruction: " + line);
+                        String ldbOpcode = "C6";  // This is a placeholder opcode for LDB
+
+                        // Convert program counter to memory array index
+                        int romSize = 256; // Example ROM size
+                        int romStartIndex = memory.length - romSize; // Memory array index where ROM starts
+                        int memoryIndex = programCounter - 0xFC00 + romStartIndex;
+
+                        if (memoryIndex >= romStartIndex && memoryIndex < memory.length) {
+                            memory[memoryIndex] = ldbOpcode; // Store the LDB opcode at the current program counter location
+
+                            if (parts[1].startsWith("#$")) {
+                                // Extract the immediate value and store it in the next address
+                                String immediateValue = parts[1].substring(2); // Remove the '#$'
+                                memory[memoryIndex + 1] = immediateValue; // Store the immediate value
+
+                                // Increment program counter by 2, for the opcode and operand
+                                programCounter += 2;
+                            }
+
+                            // Update the ROM view after modifying memory
+                            updateRomMemoryView();
+                        } else {
+                            JOptionPane.showMessageDialog(frame, "Program counter is out of ROM range.");
+                        }
+                        printToOutput(String.format("Executed instruction: LDB #%s, PC at: %04X", line, programCounter));
+
                     }
                     break;
                 case "LDX":
@@ -334,7 +399,25 @@ public class Motorola6809Emulator {
                         String valueStr = parts[1].replaceAll("#\\$", ""); // Remove the immediate value indicator
                         indexRegisterX = Integer.parseInt(valueStr, 16); // Parse the immediate value as hexadecimal
                         indexRegisterXField.setText(String.format("%04X", indexRegisterX)); // Update the text field to show the register's new value
-                        printToOutput("Executed instruction: LDX with value #$" + valueStr);
+
+                        int romSize = 256;
+                        int romStartIndex = memory.length - romSize; // Memory array index where ROM starts
+                        int memoryIndex = programCounter - 0xFC00 + romStartIndex; // Translate to the array index
+
+                        if (memoryIndex >= romStartIndex && memoryIndex < memory.length - 1) {
+                            memory[memoryIndex] = "8E"; // Opcode for LDX immediate
+                            memory[memoryIndex + 1] = String.format("%02X", (indexRegisterX >> 8) & 0xFF); // High byte of operand
+                            memory[memoryIndex + 2] = String.format("%02X", indexRegisterX & 0xFF); // Low byte of operand
+
+                            // Update the program counter
+                            programCounter += 3; // Opcode + 2 bytes of operand
+
+                            // Update the ROM view to reflect the new state of memory
+                            updateRomMemoryView();
+                        } else {
+                            JOptionPane.showMessageDialog(frame, "Program counter is out of ROM range or not enough space for LDX.");
+                        }
+                        printToOutput("Executed instruction: LDX with value #$" + valueStr + "; PC = $" + String.format("%04X", programCounter));
                     }
                     break;
 
@@ -343,100 +426,258 @@ public class Motorola6809Emulator {
                         String valueStr = parts[1].replaceAll("#\\$", ""); // Remove the immediate value indicator
                         indexRegisterY = Integer.parseInt(valueStr, 16); // Parse the immediate value as hexadecimal
                         indexRegisterYField.setText(String.format("%04X", indexRegisterY)); // Update the text field to show the register's new value
-                        printToOutput("Executed instruction: LDY with value #$" + valueStr);
+
+                        int romSize = 256;
+                        int romStartIndex = memory.length - romSize; // Memory array index where ROM starts
+                        int memoryIndex = programCounter - 0xFC00 + romStartIndex; // Translate to the array index
+
+                        if (memoryIndex >= romStartIndex && memoryIndex < memory.length - 3) {
+                            memory[memoryIndex] = "10"; // First byte of LDY opcode
+                            memory[memoryIndex + 1] = "CE"; // Second byte of LDY opcode
+                            memory[memoryIndex + 2] = String.format("%02X", (indexRegisterY >> 8) & 0xFF); // High byte of operand
+                            memory[memoryIndex + 3] = String.format("%02X", indexRegisterY & 0xFF); // Low byte of operand
+
+                            // Update the program counter
+                            programCounter += 4; // 2 bytes for opcode + 2 bytes for operand
+
+                            // Update the ROM view to reflect the new state of memory
+                            updateRomMemoryView();
+                        } else {
+                            JOptionPane.showMessageDialog(frame, "Program counter is out of ROM range or not enough space for LDY.");
+                        }
+                        printToOutput("Executed instruction: LDY with value #$" + valueStr + "; PC = $" + String.format("%04X", programCounter));
                     }
                     break;
-                case "PSH":
-                    if (stackPointer >= 0) { // Check lower bound
-                        memory[stackPointer] = accumulatorAField.getText(); // Push the value onto the stack
-                        stackPointer--; // Decrement after pushing to simulate stack growth
-                        printToOutput("Pushed value onto stack at address: " + String.format("%04X", stackPointer + 1));
+                case "PSHS":
+                    if (stackPointer >= 0 && stackPointer < memory.length) {
+                        String accumulatorValue = accumulatorAField.getText();
+                        String pshsOpcode = "34";
+
+                        int memoryIndex = programCounter - 0xFC00 + (memory.length - 256);
+
+                        if (memoryIndex >= 0 && memoryIndex < memory.length - 1) {
+                            memory[memoryIndex] = pshsOpcode; // Store opcode
+                            memory[memoryIndex + 1] = accumulatorValue;
+                            memory[stackPointer] = accumulatorValue; // Push accumulator value onto stack
+                            stackPointer--; // Decrement stack pointer to simulate stack push
+
+                            programCounter += 2;
+
+                            // Update the ROM view to reflect the new state of memory
+                            updateRomMemoryView();
+                        } else {
+                            JOptionPane.showMessageDialog(frame, "Stack pointer or program counter out of range.");
+                        }
+
+                        // Print the output message with the updated program counter
+                        printToOutput(String.format("Executed instruction: PSHS A, SP at: %04X, PC at: %04X", stackPointer, programCounter));
                     } else {
                         JOptionPane.showMessageDialog(frame, "Stack overflow error!"); // The stack is full, cannot push
                     }
                     break;
-                case "PUL":
+                case "PULS":
                     // Check if the stack pointer is within the bounds of the memory array
                     if (stackPointer >= 0 && stackPointer < memory.length - 1) {
+                        String pulsOpcode = "35";  // Placeholder opcode for PULS
+                        String accumulatorValue = accumulatorAField.getText();
+
+                        // Store the PULS opcode at the current program counter location
+                        int memoryIndex = programCounter - 0xFC00 + (memory.length - 256); // Adjust as per your ROM setup
+
+                        if (memoryIndex >= 0 && memoryIndex < memory.length) {
+                            memory[memoryIndex] = pulsOpcode; // Store opcode
+                            memory[memoryIndex + 1 ] = accumulatorValue;
+
+                            // Increment the program counter by 1 for the opcode (assuming PULS only takes 1 byte)
+                            programCounter += 2;
+
+                            // Update the ROM view to reflect the new state of memory
+                            updateRomMemoryView();
+                        } else {
+                            JOptionPane.showMessageDialog(frame, "Program counter is out of ROM range.");
+                        }
+
+                        // Execute the PULS instruction
                         stackPointer++; // Increment stack pointer to point to the next item to pull
                         String valuePulled = memory[stackPointer]; // Retrieve the value from the stack
                         accumulatorAField.setText(valuePulled); // Update Accumulator A with the retrieved value
-                        printToOutput("Pulled " + valuePulled + " from the stack at address " + String.format("%04X", stackPointer));
+                        printToOutput(String.format("Pulled %s from the stack at address: %04X, PC at: %04X", valuePulled, stackPointer, programCounter));
                         memory[stackPointer] = "00"; // Optionally clear the value in memory if your stack behavior requires it
+
+                        // Update the memory view after the operation
+                        updateMemoryView();
+                        // Update register fields to show the new stack pointer value
+                        updateRegisterFields();
                     } else {
                         JOptionPane.showMessageDialog(frame, "Stack underflow error!"); // The stack is empty, cannot pull
                     }
-                    updateMemoryView(); // Update the memory view after the operation
-                    updateRegisterFields(); // Update register fields to show the new stack pointer value
                     break;
-                case "ADD":
+
+                case "ADDA":
                     try {
+                        String addaOpcode = "8B"; // Placeholder opcode for ADDA immediate (assuming immediate addressing)
                         String inputA = accumulatorAField.getText().replaceAll("(?i)^0x", "");
                         String inputB = accumulatorBField.getText().replaceAll("(?i)^0x", "");
                         int a = Integer.parseInt(inputA, 16);
                         int b = Integer.parseInt(inputB, 16);
                         int sum = a + b;
-                        sum &= 0xFF;
+                        sum &= 0xFF; // Ensure the result is within one byte
                         accumulatorAField.setText(String.format("%02X", sum).toUpperCase());
 
-                        // Determine the next free memory address or use a specific one
-                        int nextFreeMemoryAddress = findNextFreeMemoryAddress();
+                        // Convert program counter to memory array index
+                        int romSize = 256; // Example ROM size
+                        int romStartIndex = memory.length - romSize; // Memory array index where ROM starts
+                        int memoryIndex = programCounter - 0xFC00 + romStartIndex;
 
-                        // Update the memory at the next free address with the sum
-                        memory[nextFreeMemoryAddress] = String.format("%02X", sum).toUpperCase();
+                        if (memoryIndex >= 0 && memoryIndex < memory.length - 1) {
+                            memory[memoryIndex] = addaOpcode; // Store the opcode for ADDA
+                            memory[memoryIndex + 1] = String.format("%02X", b); // Store the operand (immediate value)
 
-                        updateMemoryView();
+                            // Increment program counter by 2 for the opcode and operand
+                            programCounter += 2;
 
+                            // Update the ROM view and the general memory view to reflect the new state of memory
+                            updateRomMemoryView();
+                            updateMemoryView();
+                        } else {
+                            JOptionPane.showMessageDialog(frame, "Program counter is out of ROM range or not enough space for ADDA.");
+                        }
+
+                        printToOutput(String.format("Executed instruction: ADDA #%s, Result in A: %s, PC at: %04X", inputB, String.format("%02X", sum), programCounter));
                     } catch (NumberFormatException ex) {
-                        JOptionPane.showMessageDialog(frame, "Invalid hexadecimal input for ADD.");
+                        JOptionPane.showMessageDialog(frame, "Invalid hexadecimal input for ADDA.");
                     }
                     break;
-                case "SUB":
+
+                case "SUBA":
                     try {
+                        String subaOpcode = "80"; // Placeholder opcode for SUBA immediate (assuming immediate addressing)
                         String inputA = accumulatorAField.getText().replaceAll("(?i)^0x", "");
                         String inputB = accumulatorBField.getText().replaceAll("(?i)^0x", "");
                         int a = Integer.parseInt(inputA, 16);
                         int b = Integer.parseInt(inputB, 16);
                         int difference = a - b;
-                        difference &= 0xFF;
+                        difference &= 0xFF; // Ensure the result is within one byte
                         accumulatorAField.setText(String.format("%02X", difference).toUpperCase());
 
-                        // Store the result in memory
-                        int memoryAddressForSub = findNextFreeMemoryAddress();
-                        memory[memoryAddressForSub] = String.format("%02X", difference).toUpperCase();
+                        // Convert program counter to memory array index
+                        int romSize = 256; // Example ROM size
+                        int romStartIndex = memory.length - romSize; // Memory array index where ROM starts
+                        int memoryIndex = programCounter - 0xFC00 + romStartIndex;
 
-                        updateMemoryView();
+                        if (memoryIndex >= 0 && memoryIndex < memory.length - 1) {
+                            memory[memoryIndex] = subaOpcode; // Store the opcode for SUBA
+                            memory[memoryIndex + 1] = String.format("%02X", b); // Store the operand (immediate value)
 
+                            // Increment program counter by 2 for the opcode and operand
+                            programCounter += 2;
+
+                            // Update the ROM view and the general memory view to reflect the new state of memory
+                            updateRomMemoryView();
+                            updateMemoryView();
+                        } else {
+                            JOptionPane.showMessageDialog(frame, "Program counter is out of ROM range or not enough space for SUBA.");
+                        }
+
+                        printToOutput(String.format("Executed instruction: SUBA #%s, Result in A: %s, PC at: %04X", inputB, String.format("%02X", difference), programCounter));
                     } catch (NumberFormatException ex) {
-                        JOptionPane.showMessageDialog(frame, "Invalid hexadecimal input for SUB.");
+                        JOptionPane.showMessageDialog(frame, "Invalid hexadecimal input for SUBA.");
                     }
                     break;
 
                 case "MUL":
                     try {
+                        String mulaOpcode = "3D"; // Replace XX with the actual opcode for MULA immediate
                         String inputA = accumulatorAField.getText().replaceAll("(?i)^0x", "");
                         String inputB = accumulatorBField.getText().replaceAll("(?i)^0x", "");
                         int a = Integer.parseInt(inputA, 16);
                         int b = Integer.parseInt(inputB, 16);
                         int product = a * b;
-                        product &= 0xFF;
+                        product &= 0xFF; // Ensure the result is within one byte
                         accumulatorAField.setText(String.format("%02X", product).toUpperCase());
 
-                        
-                        // Store the result in memory
-                        int memoryAddressForMul = findNextFreeMemoryAddress();
-                        memory[memoryAddressForMul] = String.format("%02X", product).toUpperCase();
+                        // Convert program counter to memory array index
+                        int romSize = 256; // Example ROM size
+                        int romStartIndex = memory.length - romSize; // Memory array index where ROM starts
+                        int memoryIndex = programCounter - 0xFC00 + romStartIndex;
 
-                        updateMemoryView();
+                        if (memoryIndex >= 0 && memoryIndex < memory.length - 1) {
+                            memory[memoryIndex] = mulaOpcode; // Store the opcode for MULA
 
+                            // Increment program counter by 2 for the opcode and operand
+                            programCounter += 1;
+
+                            // Update the ROM view and the general memory view to reflect the new state of memory
+                            updateRomMemoryView();
+                            updateMemoryView();
+                        } else {
+                            JOptionPane.showMessageDialog(frame, "Program counter is out of ROM range or not enough space for MULA.");
+                        }
+
+                        printToOutput(String.format("Executed instruction: MULA #%s, Result in A: %s, PC at: %04X", inputB, String.format("%02X", product), programCounter));
                     } catch (NumberFormatException ex) {
-                        JOptionPane.showMessageDialog(frame, "Invalid hexadecimal input for MUL.");
+                        JOptionPane.showMessageDialog(frame, "Invalid hexadecimal input for MULA.");
                     }
                     break;
+
                 case "STA":
                     if (parts.length >= 2) {
-                        handleSTA(parts[1], accumulatorAField);
-                        printToOutput("Executed instruction: " + line);
+                        String operand1 = parts[1]; // Assume operand is in the format $XXXX or $XX for direct/extended addressing
+                        handleSTA(operand1, accumulatorAField); // Function to store accumulator value at memory address
+
+                        String staOpcode = "B7"; // Replace with the actual opcode for STA
+                        String addressOperand = operand1.replace("$", ""); // Remove $ for storing in memory
+
+                        // Calculate the index in the ROM area
+                        int romSize = 256; // Define the size of the ROM area
+                        int romStartIndex = memory.length - romSize; // Calculate the start index of ROM in memory array
+                        int memoryIndex = programCounter - 0xFC00 + romStartIndex; // Calculate the actual index in memory array
+
+                        // Store opcode and operand in ROM if there's enough space
+                        if (memoryIndex >= 0 && memoryIndex < memory.length - 2) {
+                            memory[memoryIndex] = staOpcode; // Store the opcode for STA at the program counter location
+                            memory[memoryIndex + 1] = addressOperand.substring(0, 2); // High byte of address
+                            memory[memoryIndex + 2] = addressOperand.substring(2); // Low byte of address
+
+                            programCounter += 3; // Increment the program counter by 3 (opcode + 2 bytes of address)
+
+                            updateRomMemoryView(); // Update ROM view to reflect changes
+                            updateMemoryView(); // Update general memory view
+                        } else {
+                            JOptionPane.showMessageDialog(frame, "Program counter is out of ROM range or not enough space for STA.");
+                        }
+
+                        printToOutput(String.format("Executed STA at %s, PC at: %04X", operand1, programCounter));
+                    }
+                    break;
+            case "STB":
+                    if (parts.length >= 2) {
+                        String operand1 = parts[1];
+                        handleSTA(operand1, accumulatorBField);
+
+                        String staOpcode = "F7";
+                        String addressOperand = operand1.replace("$", "");
+
+
+                        int romSize = 256;
+                        int romStartIndex = memory.length - romSize;
+                        int memoryIndex = programCounter - 0xFC00 + romStartIndex;
+
+                        // Store opcode and operand in ROM if there's enough space
+                        if (memoryIndex >= 0 && memoryIndex < memory.length - 2) {
+                            memory[memoryIndex] = staOpcode; // Store the opcode for STA at the program counter location
+                            memory[memoryIndex + 1] = addressOperand.substring(0, 2); // High byte of address
+                            memory[memoryIndex + 2] = addressOperand.substring(2); // Low byte of address
+
+                            programCounter += 3; // Increment the program counter by 3 (opcode + 2 bytes of address)
+
+                            updateRomMemoryView(); // Update ROM view to reflect changes
+                            updateMemoryView(); // Update general memory view
+                        } else {
+                            JOptionPane.showMessageDialog(frame, "Program counter is out of ROM range or not enough space for STB.");
+                        }
+
+                        printToOutput(String.format("Executed STB at %s, PC at: %04X", operand1, programCounter));
                     }
                     break;
                 default:
@@ -516,7 +757,6 @@ public class Motorola6809Emulator {
             currentMemoryAddress = 0; // Reset the memory address or handle as required
         }
     }
-
 
     private void performBinaryOperation(JTextField operand1, JTextField operand2, BinaryOperation operation) {
         int a = Integer.parseInt(operand1.getText());
