@@ -32,3 +32,8 @@ Make sure Java is installed on your system.
 Compile the Java source files:
 ```shell
 javac Motorola6809Emulator.java
+```
+Run the compiled class:
+```shell
+java Motorola6809Emulator
+```
