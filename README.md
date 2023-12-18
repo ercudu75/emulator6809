@@ -1,28 +1,34 @@
-# emulator6809
+# Motorola 6809 Emulator
 
+## Overview
+This project is an emulator for the Motorola 6809 microprocessor. It simulates the behavior of the 6809, allowing users to input assembly code, execute it, and view the results in the simulated registers and memory. The emulator starts at the memory address `0xFC00`.
+## Features
+- Assembly Code Editor: Enter and run custom 6809 assembly code.
+- Register Display: View and modify the contents of the A and B accumulators, index registers X and Y, stack pointer, and condition code register.
+- Memory View: Inspect and interact with a simplified version of the 6809's addressable memory.
+- Step Execution: Execute instructions one at a time and observe changes in memory and registers.
+- Console Output: View the output log for executed instructions and errors.
 
-The Emulator 6809 is a software application that simulates the behavior of the Motorola 6809 microprocessor. The Motorola 6809 is an 8-bit microprocessor that was widely used in the late 1970s and 1980s. The emulator allows developers and enthusiasts to run programs designed for the 6809 microprocessor on modern computing platforms without needing the original hardware.
+## How to Use
+1. **Start the Emulator**: Launch the emulator to initialize the memory and registers.
+2. **Enter Assembly Code**: Click on the "Open Asm Editor" to write or paste assembly code.
+3. **Run Code**: Execute the code to see it reflected in the memory and registers.
+4. **Step Through Code**: Use the "Step" button to go through the code line by line.
+5. **Inspect Memory and Registers**: The current state of memory and registers will be updated after each operation.
 
+## Instructions Supported
+- Load Accumulator (LDA, LDB)
+- Add (ADD)
+- Subtract (SUB)
+- Multiply (MUL)
+- Load Index Registers (LDX, LDY)
+- Push to Stack (PSH)
+- Pull from Stack (PUL)
+- Store Accumulator (STA)
+- Additional instructions...
 
-# Key Features of Emulator 6809:
-Instruction Set Simulation: Accurately emulates the 6809 instruction set, so you can run 6809 assembly language programs.
-Memory Mapping: Simulates the memory architecture of a system based on the 6809, allowing you to test how your program would interact with hardware.
-Debugging Tools: Often includes debugging options such as breakpoints, memory viewers, and register displays to help you identify issues in your programs.
-I/O Simulation: Some emulators also simulate input/output hardware, such as keyboards, displays, and disk drives, which would have been part of a 6809-based system.
-Speed Control: Allows you to control the speed of emulation, which can be useful for debugging or understanding system behavior.
-
-# Significance and Practical Applications:
-Legacy Software: Helps in running or maintaining legacy systems that originally used the 6809 processor.
-Development and Testing: Provides an environment for developing new 6809 programs or testing modifications to existing programs without needing the actual hardware.
-Education: Useful educational tool for understanding the architecture and assembly language programming of classic microprocessors.
-
-# How it Works - Breaking it Down:
-Bootstrap: Initially, the emulator sets up a simulated environment that mimics the hardware characteristics of a 6809-based system.
-Fetch-Decode-Execute Cycle: At the heart of the emulator is a loop that mimics the fetch-decode-execute cycle of the real microprocessor.
-Fetch: Retrieves the next instruction from simulated memory.
-Decode: Identifies what the instruction is meant to do.
-Execute: Carries out the action.
-State Management: Keeps track of processor registers, memory, and other states, updating them as each instruction is executed.
-I/O Handling: Simulates the Input/Output operations if needed.
-Debugging and Monitoring: Provides tools for real-time tracking of memory, CPU registers, and program execution flow.
-
+## Building and Running
+Make sure Java is installed on your system.
+Compile the Java source files:
+```shell
+javac Motorola6809Emulator.java

@@ -611,12 +611,12 @@ public class Motorola6809Emulator {
                             updateRomMemoryView();
                             updateMemoryView();
                         } else {
-                            JOptionPane.showMessageDialog(frame, "Program counter is out of ROM range or not enough space for MULA.");
+                            JOptionPane.showMessageDialog(frame, "Program counter is out of ROM range or not enough space for MUL.");
                         }
 
-                        printToOutput(String.format("Executed instruction: MULA #%s, Result in A: %s, PC at: %04X", inputB, String.format("%02X", product), programCounter));
+                        printToOutput(String.format("Executed instruction: MUL #%s, Result in A: %s, PC at: %04X", inputB, String.format("%02X", product), programCounter));
                     } catch (NumberFormatException ex) {
-                        JOptionPane.showMessageDialog(frame, "Invalid hexadecimal input for MULA.");
+                        JOptionPane.showMessageDialog(frame, "Invalid hexadecimal input for MUL.");
                     }
                     break;
 
